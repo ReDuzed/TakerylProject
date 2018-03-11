@@ -16,17 +16,18 @@ namespace TakerylProject
 	public class ProjectPlayer : ModPlayer
 	{
 		int blinkCharge = 0, blinkRange = 32, blinkDust, blinkCoolDown = 0;
-		int radius, degrees = 360;
+		int radius; 
+		float degrees = 0;
 		bool canBlink = false, blinked;
 		bool facingRight, facingLeft;
 		const int defaultBlinkRange = 32;
 		const int TileSize = 16;
 		Vector2 dustPos;
+		Vector2 center;
 		public override void PreUpdate()
 		{
 			int TileX = (int)player.position.X/16;
 			int TileY = (int)player.position.Y/16;
-			Main.NewText("Blink Charge: " +blinkCharge,200,150,100);
 			if(!canBlink && !blinked && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.LeftShift) < 0)
 			{
 				if((player.controlLeft || player.controlRight))
@@ -85,14 +86,16 @@ namespace TakerylProject
 					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/ChargeStartup"), player.position);
 				}
 				blinkCharge++;
+				degrees+=0.06f;
 				
-				radius = 8;
+				radius = 64;
 				double X = (radius*Math.Cos(radius*2/(180/Math.PI)));
 				double Y = (radius*Math.Sin(radius*2/(180/Math.PI)));
+				center = player.position + new Vector2(player.width/2, player.height/2);
 				blinkDust = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 1.2f);
 				Main.dust[blinkDust].noGravity = true;
-				Main.dust[blinkDust].velocity.X = (float)(radius*Math.Cos(blinkCharge));
-				Main.dust[blinkDust].velocity.Y = (float)(radius*Math.Sin(blinkCharge));
+				Main.dust[blinkDust].position.X = center.X + (float)(radius*Math.Cos(degrees));
+				Main.dust[blinkDust].position.Y = center.Y + (float)(radius*Math.Sin(degrees));
 				
 				if(blinkCharge >= 117)
 				{
@@ -107,8 +110,9 @@ namespace TakerylProject
 						player.position.X -= TileSize*blinkRange;
 						facingLeft = false;
 					}
-					for(int k = 0; k < degrees/2; k++)
+					for(int k = 0; k < 360/2; k++)
 					{
+						radius = 16;
 						blinkDust = Dust.NewDust(player.Center, 8, 8, 71, 0f, 0f, 0, Color.White, 1.2f);
 						Main.dust[blinkDust].noGravity = true;
 						Main.dust[blinkDust].velocity.X = (float)(radius*Math.Cos(k));
@@ -117,12 +121,15 @@ namespace TakerylProject
 					blinkRange = defaultBlinkRange;
 					blinkCharge = 0;
 					blinkCoolDown = 360;
+					degrees = 0;
 					canBlink = false;
 					blinked = true;
 				}
 			}
-			if(blinkCoolDown > 0) blinkCoolDown--;
-			if(blinkCoolDown == 0) blinked = false;
+			if(blinkCoolDown > 0) 
+				blinkCoolDown--;
+			if(blinkCoolDown == 0) 
+				blinked = false;
 		}
 		
 		public bool CheckLeft(int i, int j, Player player)
