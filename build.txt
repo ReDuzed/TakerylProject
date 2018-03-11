@@ -1,0 +1,9 @@
+author = Duze
+version = 0.1
+displayName = Takeryl Project
+homepage = 
+hideCode = false
+hideResources = false
+includeSource = false
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\* *.ini 
+includePDB = true
