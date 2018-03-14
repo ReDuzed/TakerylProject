@@ -12,9 +12,9 @@ namespace TakerylProject.Items
 		public override void SetStaticDefaults()
 		{
 			DisplayName.SetDefault("Spacial Anomaly");
-			Tooltip.SetDefault("Bends swords to your hand"
+			Tooltip.SetDefault("Bends special swords to your hand"
 					+	"\nHold the 'Middle Mouse Button' to charge"
-					+	"\nMust have a sword selected on your hotbar");
+					+	"\nMust have a 'unique' sword selected on your hotbar");
 		}
 		public override void SetDefaults()
 		{
@@ -28,10 +28,21 @@ namespace TakerylProject.Items
 		}
 		public override void AddRecipes()
 		{
+			// recipe 1
 			ModRecipe recipe = new ModRecipe(mod);
-			recipe.AddIngredient(9);
+			recipe.AddIngredient(46);	// recipe for night's edge
+			recipe.AddIngredient(121);
+			recipe.AddIngredient(155);
+			recipe.AddIngredient(190);
+			recipe.AddTile(26);
 			recipe.SetResult(this, 1);
 			recipe.AddRecipe();
+			// recipe 2
+			ModRecipe recipe2 = new ModRecipe(mod);
+			recipe2.AddIngredient(675);	// night's edge
+			recipe2.AddTile(TileID.CrystalBall);
+			recipe2.SetResult(this, 1);
+			recipe2.AddRecipe();
 		}
 		
 		int spinCharge = 0, spinDuration = 600;
@@ -48,7 +59,7 @@ namespace TakerylProject.Items
 			var modPlayer = player.GetModPlayer<ProjectPlayer>(mod);
 			
 			Item item = player.inventory[player.selectedItem];
-			if(!modPlayer.canSpin && !spinning && Main.mouseMiddle && item.type == 368)
+			if(!modPlayer.canSpin && !spinning && Main.mouseMiddle && (item.type == 46 || item.type == 121 || item.type == 155 || item.type == 190 || item.type == 273 ||item.type == 368 || item.type == 484 || item.type == 485 || item.type == 486 || item.type == 675 || item.type == 723 || item.type == 989 || item.type == 1166 || item.type == 1185 || item.type == 1192 || item.type == 1199))
 			{
 				spinCharge++;
 				if(spinCharge >= 60)
@@ -68,7 +79,7 @@ namespace TakerylProject.Items
 			if(modPlayer.canSpin)
 			{
 			//	blinkCharge = 0;
-				if(item.type == 368)
+				if(item.type == 46 || item.type == 121 || item.type == 155 || item.type == 190 || item.type == 273 ||item.type == 368 || item.type == 484 || item.type == 485 || item.type == 486 || item.type == 675 || item.type == 723 || item.type == 989 || item.type == 1166 || item.type == 1185 || item.type == 1192 || item.type == 1199)
 				{
 					spinning = true;
 					
@@ -92,7 +103,7 @@ namespace TakerylProject.Items
 						if(n.active && !n.friendly && !n.dontTakeDamage 
 						&& dmgTicks == 0 && swordHitBox.Intersects(npcBox))
 						{
-							n.StrikeNPC((int)(item.damage + player.meleeDamage), item.knockBack*3, player.direction*(-1),false,false);
+							n.StrikeNPC((int)(item.damage + player.meleeDamage), item.knockBack*3, player.direction,false,false);
 							dmgTicks = 10;
 						}
 					}
@@ -111,6 +122,10 @@ namespace TakerylProject.Items
 					soundTicks++;
 					if(soundTicks%16 == 0)
 						Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/SpinQuiet"), player.bodyPosition + new Vector2(PosX, PosY));
+				}
+				else 
+				{
+					spinning = false;
 				}
 				if(spinDuration > 0) 
 					spinDuration--;

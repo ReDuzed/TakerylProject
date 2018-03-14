@@ -16,146 +16,165 @@ namespace TakerylProject
 	public class ProjectPlayer : ModPlayer
 	{
 		public bool canSpin = false;
-		
-	/*	int blinkCharge = 0, blinkRange = 32, blinkDust, blinkCoolDown = 0;
-		int radius, Radius; 
-		float degrees = 0, degrees2 = 0, degrees3 = 0;
-		bool canBlink = false, blinked;
-		bool facingRight, facingLeft;
-		const int defaultBlinkRange = 32;
+		public bool drawBlink = false;
+		public bool drawLeft, drawRight;
+		public bool angel, demon, spacePirate;
+		bool light = false;
+		bool grow = true;
+		int lightDust, lightDust2;
+		int coolDown = 0;
+		int radius = 48;
+		float degrees = 0.017f, degrees2 = 3.077f;
+		bool airStrikeUsed = false;
+		bool canAirStrike = false, striking = false, midAir = false;
+		int strikeDust, strikeCharge, strikeRange = 32, strikeCoolDown = 0, airStrike;
+		float Depreciate = 60, Point;
+		int ticks = 0;
+		const int defaultStrikeRange = 32;
+		float WaveTimer = 0f;
+		int charge = 0;
+		bool active = false;
+		const float Time = 60;
 		const int TileSize = 16;
-		Vector2 dustPos;
+		const float radians = 0.017f;
 		Vector2 center;
-		int spinCharge = 0, spinDuration = 600;
-		bool canSpin, spinning = false, charging = false;
-		int dmgTicks;
-		int soundTicks = 0;
-		bool thrown = false;
-		int throwCharge = 0, throwSpeed = 2;
-		int thrownWeapon = 0;
-		public int weaponType = 0;
-		Vector2 throwPos;
-		float CurrentPoint, Depreciating = 0; 
-		const float defaultThrowSpeed = 10;		
-		const float Time = 100;
-		const float gravity = 0.0612f;
-		Texture2D swordTexture;
+		Vector2 Start, End;
+		Rectangle mouse;
+		Rectangle projBox;
 		public override void PreUpdate()
 		{
 			int TileX = (int)player.position.X/16;
 			int TileY = (int)player.position.Y/16;
-			if(!canSpin && !canBlink && !blinked && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.LeftShift) < 0)
+			
+			if(charge == 0 && Main.mouseRight)
 			{
-				if((player.controlLeft || player.controlRight))
-				{
-					blinkCharge++;
-					if(blinkCharge == 1 || blinkCharge == 60)
-					{
-						Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/ShineSparkLoop"), player.position);
-					}
-				}
-				else
-				{
-					if(blinkCharge > 0)
-						blinkCharge--;
-				}
-				if(blinkCharge >= 117)
-				{
-					if(player.direction == 1)
-					{
-						for(int k = 0; k < blinkRange; k++)
-						{
-							if(CheckRight(TileX + blinkRange, TileY, player))
-								blinkRange -= 1;
-						}
-						facingRight = true;
-						facingLeft = false;
-					}
-					else if(player.direction == -1)
-					{
-						for(int k = 0; k < blinkRange; k++)
-						{
-							if(CheckLeft(TileX - blinkRange, TileY, player))
-								blinkRange -= 1;
-						}
-						facingRight = false;
-						facingLeft = true;
-					}
-					if(facingLeft && !CheckLeft(TileX - blinkRange, TileY, player) 
-					|| facingRight && !CheckRight(TileX + blinkRange, TileY, player))
-					{
-						canBlink = true;
-						blinkCharge = 0;
-					}
-					else 
-					{
-						blinkRange = defaultBlinkRange;
-						blinkCharge = 0;
-					}
-				}
+				charge = 180;
+				active = !active;
 			}
-			if(canBlink)
+			if(charge > 0)
+				charge--;
+			if(active)
 			{
-				player.velocity = Vector2.Zero;
-				if(blinkCharge == 0)
+				Vector2 updateCenter = player.position + new Vector2(0, player.height/2);
+				Vector2 mousev = new Vector2(Main.mouseX + Main.screenPosition.X, Main.mouseY + Main.screenPosition.Y );
+				
+				Start = updateCenter;
+				End.X = Start.X + (mousev.X - Start.X);
+				End.Y = Start.Y + (mousev.Y - Start.Y);
+				
+				if(ticks%60 == 0)
+					// rocket ID: 134
+					airStrike = Projectile.NewProjectile(updateCenter, Vector2.Zero, 134, 64 + Main.rand.Next(-16, 8), 4f, player.whoAmI, 0f, 0f);
+				
+				ticks++;
+				degrees += radians;
+				radius = 4;
+				
+				float Angle = (float)Math.Atan2(Main.screenPosition.Y + Main.mouseY - updateCenter.Y,
+												Main.screenPosition.X + Main.mouseX - updateCenter.X);
+				float MouseAngle = (float)Math.Atan2(mousev.Y - Main.projectile[airStrike].position.Y, 
+													mousev.X - Main.projectile[airStrike].position.X);
+				if(Depreciate > 0)
 				{
-					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/ChargeStartup"), player.position);
+					Depreciate--;
+					Point = (Time - Depreciate) / Time;
+					Main.projectile[airStrike].position = Vector2.Lerp(Start, End, Point);
+				}	
+				Main.projectile[airStrike].velocity.X += (float)(radius*Math.Cos(MouseAngle));
+				Main.projectile[airStrike].velocity.Y += (float)(radius*Math.Sin(MouseAngle));
+			}
+			
+			if(!canAirStrike && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.X) < 0)
+			{
+				if(!player.controlLeft && !player.controlRight && strikeCoolDown == 0)
+				{
+					strikeCharge++;
 				}
-				blinkCharge++;
+				if(strikeCharge == 10 && !striking && !midAir )
+					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/ShineSparkLoop"), player.position);
+				for(int k = 0; k < defaultStrikeRange; k++)
+				{
+					if(CheckUp(TileX, TileY - strikeRange, player))
+						strikeRange--;
+				}
+				strikeCharge = 0;
+				canAirStrike = true;
+				
+				// set positions
+				Start = player.position;
+				End.X = Start.X;
+				End.Y = Start.Y - TileSize * strikeRange;
+			}
+			if(canAirStrike && strikeRange >= 32 && !midAir && !striking)
+			{
+				strikeCoolDown = 3600;
+				
+				player.velocity = Vector2.Zero;
+				if(strikeCharge == 10 && !striking && !midAir)
+					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/ChargeStartup"), player.position);
+				if(strikeCharge < 180)
+					strikeCharge++;
+				if(strikeCharge >= 117)
+				{
+					striking = true;
+					strikeCharge = 0;
+					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/teleport"), Start);
+					canAirStrike = false;
+				}
 				degrees+=0.06f;
 				
 				radius = 64;
 				double X = (radius*Math.Cos(radius*2/(180/Math.PI)));
 				double Y = (radius*Math.Sin(radius*2/(180/Math.PI)));
 				center = player.position + new Vector2(player.width/2, player.height/2);
-				blinkDust = Dust.NewDust(center, 8, 8, 71, 0f, 0f, 0, Color.White, 1.0f);
-				Main.dust[blinkDust].noGravity = true;
-				Main.dust[blinkDust].position.X = center.X + (float)(radius*Math.Cos(degrees));
-				Main.dust[blinkDust].position.Y = center.Y + (float)(radius*Math.Sin(degrees));
+				strikeDust = Dust.NewDust(center, 8, 8, 71, 0f, 0f, 0, Color.White, 1.0f);
+				Main.dust[strikeDust].noGravity = true;
+				Main.dust[strikeDust].position.X = center.X + (float)(radius*Math.Cos(degrees));
+				Main.dust[strikeDust].position.Y = center.Y + (float)(radius*Math.Sin(degrees));
 				#region points on circle
-				if(blinkCharge >= 15)
+				if(strikeCharge >= 15)
 				{
 					int degree45 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree45].noGravity = false;
 					Main.dust[degree45].position.X = center.X + (float)(radius*Math.Cos(45));
 					Main.dust[degree45].position.Y = center.Y + (float)(radius*Math.Sin(45));
 				}
-				if(blinkCharge >= 30)
+				if(strikeCharge >= 30)
 				{
 					int degree90 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree90].noGravity = false;
 					Main.dust[degree90].position.X = center.X + (float)(radius*Math.Cos(90));
 					Main.dust[degree90].position.Y = center.Y + (float)(radius*Math.Sin(90));
 				}
-				if(blinkCharge >= 45)
+				if(strikeCharge >= 45)
 				{
 					int degree135 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree135].noGravity = false;
 					Main.dust[degree135].position.X = center.X + (float)(radius*Math.Cos(135));
 					Main.dust[degree135].position.Y = center.Y + (float)(radius*Math.Sin(135));
 				}
-				if(blinkCharge >= 60)
+				if(strikeCharge >= 60)
 				{
 					int degree180 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree180].noGravity = true;
 					Main.dust[degree180].position.X = center.X + (float)(radius*Math.Cos(180));
 					Main.dust[degree180].position.Y = center.Y + (float)(radius*Math.Sin(180));
 				}
-				if(blinkCharge >= 75)
+				if(strikeCharge >= 75)
 				{
 					int degree225 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree225].noGravity = true;
 					Main.dust[degree225].position.X = center.X + (float)(radius*Math.Cos(225));
 					Main.dust[degree225].position.Y = center.Y + (float)(radius*Math.Sin(225));
 				}
-				if(blinkCharge >= 90)
+				if(strikeCharge >= 90)
 				{
 					int degree270 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree270].noGravity = true;
 					Main.dust[degree270].position.X = center.X + (float)(radius*Math.Cos(270));
 					Main.dust[degree270].position.Y = center.Y + (float)(radius*Math.Sin(270));
 				}
-				if(blinkCharge >= 117)
+				if(strikeCharge >= 117)
 				{
 					int degree315 = Dust.NewDust(player.position + new Vector2((float)X, (float)Y), 8, 8, 71, 0f, 0f, 0, Color.White, 0.5f);
 					Main.dust[degree315].noGravity = true;
@@ -163,137 +182,138 @@ namespace TakerylProject
 					Main.dust[degree315].position.Y = center.Y + (float)(radius*Math.Sin(315));
 				}
 				#endregion
-				if(blinkCharge >= 117)
+			}
+			else if(strikeRange < 32)
+			{
+				strikeRange = defaultStrikeRange;
+				strikeCharge = 0;
+				canAirStrike = false;
+			}
+			if(striking)
+			{
+				if(Depreciate > 0)
 				{
-					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/teleport"), player.oldPosition);
-					if(facingRight)
-					{
-						player.position.X += TileSize*blinkRange;
-						facingRight = false;
-					}
-					else if(facingLeft)
-					{
-						player.position.X -= TileSize*blinkRange;
-						facingLeft = false;
-					}
-					for(int k = 0; k < 360/2; k++)
-					{
-						radius = 16;
-						blinkDust = Dust.NewDust(player.Center, 8, 8, 71, 0f, 0f, 0, Color.White, 1.2f);
-						Main.dust[blinkDust].noGravity = true;
-						Main.dust[blinkDust].velocity.X = (float)(radius*Math.Cos(k));
-						Main.dust[blinkDust].velocity.Y = (float)(radius*Math.Sin(k));
-					}
-					blinkRange = defaultBlinkRange;
-					blinkCharge = 0;
-					blinkCoolDown = 360;
-					degrees = 0;
-					canBlink = false;
-					blinked = true;
+					Depreciate--;
+					Point = (Time - Depreciate) / Time;
+					player.position = Vector2.Lerp(Start, End, Point);
 				}
-			}
-			if(blinkCoolDown > 0) 
-				blinkCoolDown--;
-			if(blinkCoolDown == 0) 
-				blinked = false;
-			Item item = player.inventory[player.selectedItem];
-			if(!canSpin && !spinning && Main.mouseMiddle && item.type == 368)
-			{
-				spinCharge++;
-				if(spinCharge >= 60)
+				if(Depreciate == 0)
 				{
-					canSpin = true;
-					spinCharge = 0;
-					spinDuration = 600;
-				}
-				if(spinCharge == 30)
-					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/conjure"), player.position);
-			}
-			else
-			{
-				if(spinCharge > 0) 
-					spinCharge--;
-			}
-			if(canSpin)
-			{
-				blinkCharge = 0;
-				if(item.type == 368)
-				{
-					spinning = true;
-					
-					radius = 72;
-					degrees2 += 0.06f;
-					
 					center = player.position + new Vector2(player.width/2, player.height/2);
 					
-					float PosX = center.X + (float)(radius*Math.Cos(degrees2));
-					float PosY = center.Y + (float)(radius*Math.Sin(degrees2));	
-					
-					Vector2 swordPos = player.bodyPosition + new Vector2(PosX, PosY);
-					
-					Rectangle swordHitBox = new Rectangle((int)swordPos.X, (int)swordPos.Y, item.width, item.height);
-					NPC[] npc = Main.npc;
-					for(int k = 0; k < npc.Length-1; k++)
+					// need to update dust type
+					float radCircle = 0.017f;
+					for(int k = 0; k < 360/2; k++)
 					{
-						NPC n = npc[k];
-						Vector2 npcv = new Vector2(n.position.X, n.position.Y);
-						Rectangle npcBox = new Rectangle((int)npcv.X, (int)npcv.Y, n.width, n.height);
-						if(n.active && !n.friendly && !n.dontTakeDamage 
-						&& dmgTicks == 0 && swordHitBox.Intersects(npcBox))
-						{
-							n.StrikeNPC((int)(item.damage + player.meleeDamage), item.knockBack*3, player.direction,false,false);
-							dmgTicks = 10;
-						}
+						int r = 48;
+						strikeDust = Dust.NewDust(player.position + new Vector2(player.width/2, player.height/2), 8, 8, 20, 0f, 0f, 0, Color.White, 1f);
+						Main.dust[strikeDust].noGravity = true;
+						radCircle = 0.017f*(k*2);
+						Main.dust[strikeDust].velocity.X = (float)(r*Math.Cos(radCircle));
+						Main.dust[strikeDust].velocity.Y = (float)(r*Math.Sin(radCircle));
 					}
-					Projectile[] projectile = Main.projectile;
-					for(int l = 0; l < projectile.Length-1; l++)
+					for(int l = 90; l < 270; l++)
 					{
-						Projectile n = projectile[l];
-						Vector2 projv = new Vector2(n.position.X, n.position.Y);
-						Rectangle projBox = new Rectangle((int)projv.X, (int)projv.Y, n.width, n.height);
-						if(n.active && swordHitBox.Intersects(projBox))
-						{
-							n.timeLeft = 0;
-						}
+						int r = 48;
+						strikeDust = Dust.NewDust(player.position + new Vector2(player.width/2, player.height/2), 8, 8, 20, 0f, 0f, 0, Color.White, 1f);
+						Main.dust[strikeDust].noGravity = true;
+						radCircle = 0.017f*(l*2);
+						Main.dust[strikeDust].velocity.X = (float)(r*Math.Cos(radCircle));
+						Main.dust[strikeDust].velocity.Y = (float)(r*Math.Sin(radCircle));
 					}
-					
-					soundTicks++;
-					if(soundTicks%16 == 0)
-						Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/SpinQuiet"), player.bodyPosition + new Vector2(PosX, PosY));
-				}
-				if(spinDuration > 0) 
-					spinDuration--;
-				if(spinDuration == 0)
-				{
-					degrees2 = 0f;
-					canSpin = false;
-					spinning = false;
+					radius = 16;
+					degrees = radians*45;
+					striking = false;
+					midAir = true;
+					Depreciate = Time;
 				}
 			}
-			if(dmgTicks > 0) dmgTicks--;
-			if(!thrown && item.type == 368 && Main.mouseRight)
+			if(midAir)
 			{
-				throwCharge++;
-				if(throwCharge == 90)
+				strikeCharge = 0;
+				striking = false;
+				canAirStrike = false;
+				
+				player.velocity = Vector2.Zero;
+				ticks++;
+				
+				radius = 8;
+				degrees += radians/2;
+				
+				Vector2 updateCenter = player.position + new Vector2(0, player.height/2);
+				
+				#region
+				// the amplitude of the wave
+				float Offset = 25.0f;
+		
+				// 360 degrees in radians
+				float Revolution = 6.28308f;
+
+				// how many waves are completed per second
+				float WavesPerSecond = 2.0f;
+
+				// get time between updates
+				float Time = 1.0f / Main.frameRate;
+				
+				// increase wave timer
+				WaveTimer += Time * Revolution * WavesPerSecond;
+				
+				float WaveOffset = (float)Math.Sin(WaveTimer) * Offset;
+				
+				float Angle = (float)Math.Atan2(Main.screenPosition.Y + Main.mouseY - updateCenter.Y,
+												Main.screenPosition.X + Main.mouseX - updateCenter.X);
+				#endregion
+				
+				if(ticks%6 == 0)
+					airStrike = Projectile.NewProjectile(updateCenter, Vector2.Zero, 134, 64, Main.projectile[134].knockBack, player.whoAmI, 0f, 0f);
+				Main.projectile[airStrike].velocity.X = (float)(radius*Math.Cos(Angle));
+				Main.projectile[airStrike].velocity.Y = (float)(radius*Math.Sin(Angle));
+				Main.projectile[airStrike].position += new Vector2(WaveOffset/2, 0);
+				
+				if(ticks > 180)
 				{
-					thrown = true;
-					throwCharge = 0;
-					Depreciating = Time;
+					midAir = false;
+					ticks = 0;
 				}
-			}
-			if(thrown)
+			}	
+			if(strikeCoolDown > 0)
+				strikeCoolDown--;
+			
+			if(!light && coolDown == 0 && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.Q) < 0)
 			{
-				throwCharge++;
-				if(throwCharge == 600)
-				{
-					thrown = false;
-					throwCharge = 0;
-				}
+				light = !light;
+				coolDown = 300;
 			}
-			if(Depreciating > 0) 
-				Depreciating--;
+			if(light)
+			{
+				degrees += 0.017f * 6; // 1 degree in radians multiplied by desired degree
+				
+				radius = 90;
+				
+				center = player.position + new Vector2(player.width/2, player.height/2);
+				// dust 1
+				lightDust = Dust.NewDust(player.Center, 8, 8, 20, 0f, 0f, 0, Color.White, 1f);
+				Main.dust[lightDust].noGravity = true;
+				Main.dust[lightDust].position.X = center.X + (float)(radius*Math.Cos(degrees));
+				Main.dust[lightDust].position.Y = center.Y + (float)(radius*Math.Sin(degrees));
+				// dust 2
+				lightDust2 = Dust.NewDust(player.Center, 8, 8, 20, 0f, 0f, 0, Color.White, 1f);
+				Main.dust[lightDust2].noGravity = true;
+				Main.dust[lightDust2].position.X = center.X + (float)(radius*Math.Cos(degrees + (0.017f*180)));
+				Main.dust[lightDust2].position.Y = center.Y + (float)(radius*Math.Sin(degrees + (0.017f*180)));
+			}
+			if(coolDown > 0)
+				coolDown--;
 		}
 		
+		public bool CheckUp(int i, int j, Player player)
+		{
+			bool Active = Main.tile[i, j-1].active() || Main.tile[i+1, j-1].active();
+			bool Solid = Main.tileSolid[Main.tile[i, j-1].type] == true || Main.tileSolid[Main.tile[i+1, j-1].type] == true;
+			
+			if(Active && Solid) return true;
+			else return false;
+		}
 		public bool CheckLeft(int i, int j, Player player)
 		{
 			bool Active = Main.tile[i-1, j].active() || Main.tile[i-1, j+1].active() || Main.tile[i-1, j +2].active();
@@ -309,9 +329,11 @@ namespace TakerylProject
 			
 			if(Active && Solid) return true;
 			else return false;
-		}	*/
+		}
+		int animate = 0, frameHeight = 52;
 		float degrees3 = 0;
 		Texture2D swordTexture;
+		Texture2D blinkTexture;
 		public override void DrawEffects(PlayerDrawInfo drawinfo, ref float r, ref float g, ref float b, ref float a, ref bool fullBright)
 		{
 			PlayerHeadDrawInfo drawInfo = new PlayerHeadDrawInfo();
@@ -320,7 +342,7 @@ namespace TakerylProject
 			
 			int radius = 72;
 			if(/*thrown || */canSpin)
-				degrees3 += 0.06f;
+				degrees3 += 0.06f; // 0.017f = 1 degree displayed in radians
 			else degrees3 = 0;
 			
 		//	CurrentPoint = (Time - Depreciating) / Time;
@@ -333,13 +355,68 @@ namespace TakerylProject
 			float MoveY = origin.Y + (float)(radius*Math.Sin(degrees3));
 			
 			Item item = player.inventory[player.selectedItem];
-			if(item.type == 368)
+			#region sword textures
+			if(item.type == 46) // light's bane
+				swordTexture = Main.itemTexture[46];
+			if(item.type == 121) // fiery greatsword
+				swordTexture = Main.itemTexture[121];
+			if(item.type == 155) // muramasa
+				swordTexture = Main.itemTexture[155];
+			if(item.type == 190) // blade of grass
+				swordTexture = Main.itemTexture[190];
+			if(item.type == 273) // night's edge
+				swordTexture = Main.itemTexture[273];
+			if(item.type == 368) // excalibur
 				swordTexture = Main.itemTexture[368];
+			if(item.type == 484) // adamantite sword
+				swordTexture = Main.itemTexture[484];
+			if(item.type == 485) // cobalt sword
+				swordTexture = Main.itemTexture[485];
+			if(item.type == 486) // mythril sword
+				swordTexture = Main.itemTexture[486];
+			if(item.type == 675) // true night's edge
+				swordTexture = Main.itemTexture[675];
+			if(item.type == 723) // beam sword
+				swordTexture = Main.itemTexture[723];
+			if(item.type == 989) // enchanted sword
+				swordTexture = Main.itemTexture[989];
+			if(item.type == 1166) // bone sword
+				swordTexture = Main.itemTexture[1166];
+			if(item.type == 1185) // palladium sword
+				swordTexture = Main.itemTexture[1185];
+			if(item.type == 1192) // orichalcum sword
+				swordTexture = Main.itemTexture[1192];
+			if(item.type == 1199) // titanium sword
+				swordTexture = Main.itemTexture[1199];
+			#endregion
 			if(canSpin)
 			{
 				Main.spriteBatch.Draw(swordTexture, 
 					bodyPosition + player.bodyPosition + new Vector2(MoveX, MoveY), 
 					null, Color.White, (degrees3*3)*(-1) + 0.48f, origin, 1f, effects, 0f);
+			}
+			if(drawBlink)
+			{
+				animate++;
+				
+				if(animate == 9)
+					animate = 0;
+				if(animate == 0)
+					frameHeight = 1;
+				else
+					frameHeight = 52;
+				blinkTexture = mod.GetTexture("Gores/ShineSpark");
+				if(drawRight)
+					Main.spriteBatch.Draw(blinkTexture, 
+						bodyPosition + player.bodyPosition - new Vector2((player.width)*(-1), (player.height/2 + 4)*(-1)),
+						new Rectangle(0, animate * frameHeight, 50, 52), Color.White, 1.57f, origin, 1.2f, effects, 0f);
+				else if(drawLeft)
+				{
+					effects = SpriteEffects.FlipVertically;
+					Main.spriteBatch.Draw(blinkTexture, 
+						bodyPosition + player.bodyPosition - new Vector2(-8, (player.height/2 + 4)*(-1)),
+						new Rectangle(0, animate * frameHeight, 50, 52), Color.White, 1.57f, origin, 1.2f, effects, 0f);
+				}
 			}
 		}
 	}

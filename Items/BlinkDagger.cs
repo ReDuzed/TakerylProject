@@ -28,7 +28,10 @@ namespace TakerylProject.Items
 		public override void AddRecipes()
 		{
 			ModRecipe recipe = new ModRecipe(mod);
-			recipe.AddIngredient(9);
+			recipe.AddIngredient(57, 5);	// demonite bar
+			recipe.AddIngredient(86, 10);	// shadow scale
+			recipe.AddIngredient(2309, 5);	// specular fish
+			recipe.AddTile(26);
 			recipe.SetResult(this, 1);
 			recipe.AddRecipe();
 		}
@@ -48,6 +51,8 @@ namespace TakerylProject.Items
 		Vector2 Start, End;
 		public override void UpdateAccessory(Player player, bool hideVisual)
 		{
+			var modPlayer = player.GetModPlayer<ProjectPlayer>(mod);
+			
 			int TileX = (int)player.position.X/16;
 			int TileY = (int)player.position.Y/16;
 			if(/*!canSpin && */!canBlink && !blinked && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.LeftShift) < 0)
@@ -76,6 +81,8 @@ namespace TakerylProject.Items
 						}
 						facingRight = true;
 						facingLeft = false;
+						modPlayer.drawRight = true;
+						modPlayer.drawLeft = false;
 					}
 					else if(player.direction == -1)
 					{
@@ -86,6 +93,8 @@ namespace TakerylProject.Items
 						}
 						facingRight = false;
 						facingLeft = true;
+						modPlayer.drawRight = false;
+						modPlayer.drawLeft = true;
 					}
 					if(facingLeft && !CheckLeft(TileX - blinkRange, TileY, player) 
 					|| facingRight && !CheckRight(TileX + blinkRange, TileY, player))
@@ -195,12 +204,14 @@ namespace TakerylProject.Items
 					Depreciate--;
 					Point = (Time - Depreciate) / Time;
 					player.position = Vector2.Lerp(Start, End, Point);
+					modPlayer.drawBlink = true;
 				}
 				else if(facingLeft && Depreciate > 0)
 				{
 					Depreciate--;
 					Point = (Time - Depreciate) / Time;
 					player.position = Vector2.Lerp(Start, new Vector2(Start.X - TileSize * blinkRange, Start.Y), Point);
+					modPlayer.drawBlink = true;
 				}
 				if(Depreciate == 0)
 				{
@@ -209,10 +220,13 @@ namespace TakerylProject.Items
 						radius = 16;
 						blinkDust = Dust.NewDust(player.Center, 8, 8, 71, 0f, 0f, 0, Color.White, 1.2f);
 						Main.dust[blinkDust].noGravity = true;
-						Main.dust[blinkDust].velocity.X = (float)(radius*Math.Cos(k));
-						Main.dust[blinkDust].velocity.Y = (float)(radius*Math.Sin(k));
+						degrees += 0.017f;
+						float radCircle = degrees*(k*2);
+						Main.dust[blinkDust].velocity.X = (float)(radius*Math.Cos(radCircle));
+						Main.dust[blinkDust].velocity.Y = (float)(radius*Math.Sin(radCircle));
 					}
 					blinked = false;
+					modPlayer.drawBlink = false;
 					Depreciate = Time;
 				}
 			}
