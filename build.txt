@@ -1,5 +1,5 @@
 author = Duze
-version = 0.1
+version = 0.3
 displayName = Takeryl Project
 homepage = 
 hideCode = false
