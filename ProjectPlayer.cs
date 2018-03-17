@@ -78,7 +78,8 @@ namespace TakerylProject
 			Vector2 origin = new Vector2((float)player.legFrame.Width * 0.5f, (float)player.legFrame.Height * 0.5f);
 			Vector2 bodyPosition = new Vector2((float)((int)(player.position.X - Main.screenPosition.X - (float)(player.bodyFrame.Width / 2) + (float)(player.width / 2))), (float)((int)(player.position.Y - Main.screenPosition.Y + (float)player.height - (float)player.bodyFrame.Height + 4f)));
 			Vector2 wingsPosition = new Vector2((float)((int)(Position.X - Main.screenPosition.X + (float)(player.width / 2) - (float)(9 * player.direction)) + 0 * player.direction), (float)((int)(Position.Y - Main.screenPosition.Y + (float)(player.height / 2) + 2f * player.gravDir + (float)24 * player.gravDir)));
-			float MoveX = origin.X + (float)(radius*Math.Cos(degrees3));
+
+      float MoveX = origin.X + (float)(radius*Math.Cos(degrees3));
 			float MoveY = origin.Y + (float)(radius*Math.Sin(degrees3));
 			
 			Item item = player.inventory[player.selectedItem];
