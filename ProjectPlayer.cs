@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Xna.Framework;
@@ -28,13 +29,14 @@ namespace TakerylProject
 		bool airStrikeUsed = false;
 		bool canAirStrike = false, striking = false, midAir = false;
 		int strikeDust, strikeCharge, strikeRange = 32, strikeCoolDown = 0, airStrike;
-		float Depreciate = 60, Point;
+		float Depreciate = 40, Point;
 		int ticks = 0;
 		const int defaultStrikeRange = 32;
 		float WaveTimer = 0f;
+		int blasts;
 		int charge = 0;
 		bool active = false;
-		const float Time = 60;
+		const float Time = 40;
 		const int TileSize = 16;
 		const float radians = 0.017f;
 		Vector2 center;
@@ -43,6 +45,9 @@ namespace TakerylProject
 		Rectangle projBox;
 		public override void PreUpdate()
 		{
+			if(angel || demon)
+				player.noFallDmg = true;
+
 			int TileX = (int)player.position.X/16;
 			int TileY = (int)player.position.Y/16;
 			
@@ -58,13 +63,9 @@ namespace TakerylProject
 				Vector2 updateCenter = player.position + new Vector2(0, player.height/2);
 				Vector2 mousev = new Vector2(Main.mouseX + Main.screenPosition.X, Main.mouseY + Main.screenPosition.Y );
 				
-				Start = updateCenter;
-				End.X = Start.X + (mousev.X - Start.X);
-				End.Y = Start.Y + (mousev.Y - Start.Y);
-				
 				if(ticks%60 == 0)
 					// rocket ID: 134
-					airStrike = Projectile.NewProjectile(updateCenter, Vector2.Zero, 134, 64 + Main.rand.Next(-16, 8), 4f, player.whoAmI, 0f, 0f);
+					blasts = Projectile.NewProjectile(updateCenter, Vector2.Zero, 134, 32 + Main.rand.Next(-16, 8), 4f, player.whoAmI, 0f, 0f);
 				
 				ticks++;
 				degrees += radians;
@@ -72,21 +73,16 @@ namespace TakerylProject
 				
 				float Angle = (float)Math.Atan2(Main.screenPosition.Y + Main.mouseY - updateCenter.Y,
 												Main.screenPosition.X + Main.mouseX - updateCenter.X);
-				float MouseAngle = (float)Math.Atan2(mousev.Y - Main.projectile[airStrike].position.Y, 
-													mousev.X - Main.projectile[airStrike].position.X);
-				if(Depreciate > 0)
-				{
-					Depreciate--;
-					Point = (Time - Depreciate) / Time;
-					Main.projectile[airStrike].position = Vector2.Lerp(Start, End, Point);
-				}	
-				Main.projectile[airStrike].velocity.X += (float)(radius*Math.Cos(MouseAngle));
-				Main.projectile[airStrike].velocity.Y += (float)(radius*Math.Sin(MouseAngle));
-			}
+				float MouseAngle = (float)Math.Atan2(mousev.Y - Main.projectile[blasts].position.Y, 
+													mousev.X - Main.projectile[blasts].position.X);
 			
-			if(!canAirStrike && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.X) < 0)
+				Main.projectile[blasts].velocity.X += Distance(Main.projectile[blasts], MouseAngle, radius).X;
+				Main.projectile[blasts].velocity.Y += Distance(Main.projectile[blasts], MouseAngle, radius).Y;
+			}
+			#region Air Strike
+			if(strikeCoolDown == 0 && !canAirStrike && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.X) < 0)
 			{
-				if(!player.controlLeft && !player.controlRight && strikeCoolDown == 0)
+				if(!player.controlLeft && !player.controlRight)
 				{
 					strikeCharge++;
 				}
@@ -104,6 +100,12 @@ namespace TakerylProject
 				Start = player.position;
 				End.X = Start.X;
 				End.Y = Start.Y - TileSize * strikeRange;
+			}
+			else if(strikeCoolDown > 0 && !canAirStrike && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.X) < 0)
+			{
+				ticks++;
+				if(ticks%20 == 0)
+					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/heathurt"), player.position);
 			}
 			if(canAirStrike && strikeRange >= 32 && !midAir && !striking)
 			{
@@ -278,7 +280,8 @@ namespace TakerylProject
 			}	
 			if(strikeCoolDown > 0)
 				strikeCoolDown--;
-			
+			#endregion
+			#region Light
 			if(!light && coolDown == 0 && Main.GetKeyState((int)Microsoft.Xna.Framework.Input.Keys.Q) < 0)
 			{
 				light = !light;
@@ -304,7 +307,20 @@ namespace TakerylProject
 			}
 			if(coolDown > 0)
 				coolDown--;
+			#endregion
 		}
+		public Vector2 Distance(Projectile projectile, float Angle, float Radius)
+		{
+		float VelocityX = (float)(Radius*Math.Cos(Angle));
+		float VelocityY = (float)(Radius*Math.Sin(Angle));
+			
+			if(projectile.velocity.X > 6f) 
+				projectile.velocity.X -= 2f;
+			if(projectile.velocity.Y > 6f) 
+				projectile.velocity.Y -= 2f;
+			
+			return new Vector2(VelocityX, VelocityY);
+		}	
 		
 		public bool CheckUp(int i, int j, Player player)
 		{
@@ -350,7 +366,7 @@ namespace TakerylProject
 			SpriteEffects effects = SpriteEffects.None;
 			Vector2 origin = new Vector2((float)player.legFrame.Width * 0.5f, (float)player.legFrame.Height * 0.5f);
 			Vector2 bodyPosition = new Vector2((float)((int)(player.position.X - Main.screenPosition.X - (float)(player.bodyFrame.Width / 2) + (float)(player.width / 2))), (float)((int)(player.position.Y - Main.screenPosition.Y + (float)player.height - (float)player.bodyFrame.Height + 4f)));
-
+			Vector2 wingsPosition = new Vector2((float)((int)(player.position.X - Main.screenPosition.X + (float)(player.width / 2) - (float)(9 * player.direction))), (float)((int)(player.position.Y - Main.screenPosition.Y + (float)(player.height / 2) + 2f * player.gravDir)));
 			float MoveX = origin.X + (float)(radius*Math.Cos(degrees3));
 			float MoveY = origin.Y + (float)(radius*Math.Sin(degrees3));
 			
@@ -417,6 +433,34 @@ namespace TakerylProject
 						bodyPosition + player.bodyPosition - new Vector2(-8, (player.height/2 + 4)*(-1)),
 						new Rectangle(0, animate * frameHeight, 50, 52), Color.White, 1.57f, origin, 1.2f, effects, 0f);
 				}
+			}
+			if(angel)
+			{
+				if(player.direction == 1)
+					Main.spriteBatch.Draw(Main.itemTexture[493], 
+						wingsPosition, 
+						new Rectangle?(new Rectangle(0, Main.itemTexture[493].Height / 4 * player.wingFrame, Main.itemTexture[493].Width, Main.itemTexture[493].Height / 4)), 
+						Color.White, 0f, new Vector2((float)(Main.itemTexture[493].Width / 2), (float)(Main.itemTexture[493].Height / 8)), 1f, effects, 0f);
+				else
+					effects = SpriteEffects.FlipHorizontally;
+					Main.spriteBatch.Draw(Main.itemTexture[493], 
+						wingsPosition, 
+						new Rectangle?(new Rectangle(0, Main.itemTexture[493].Height / 4 * player.wingFrame, Main.itemTexture[493].Width, Main.itemTexture[493].Height / 4)), 
+						Color.White, 0f, new Vector2((float)(Main.itemTexture[493].Width / 2), (float)(Main.itemTexture[493].Height / 8)), 1f, effects, 0f);
+			}
+			else if(demon)
+			{
+				if(player.direction == 1)
+					Main.spriteBatch.Draw(Main.itemTexture[492], 
+						wingsPosition, 
+						new Rectangle?(new Rectangle(0, Main.itemTexture[492].Height / 4 * player.wingFrame, Main.itemTexture[492].Width, Main.itemTexture[492].Height / 4)), 
+						Color.White, 0f, new Vector2((float)(Main.itemTexture[492].Width / 2), (float)(Main.itemTexture[492].Height / 8)), 1f, effects, 0f);
+				else
+					effects = SpriteEffects.FlipHorizontally;
+					Main.spriteBatch.Draw(Main.itemTexture[492], 
+						wingsPosition, 
+						new Rectangle?(new Rectangle(0, Main.itemTexture[492].Height / 4 * player.wingFrame, Main.itemTexture[492].Width, Main.itemTexture[492].Height / 4)), 
+						Color.White, 0f, new Vector2((float)(Main.itemTexture[492].Width / 2), (float)(Main.itemTexture[492].Height / 8)), 1f, effects, 0f);
 			}
 		}
 	}
