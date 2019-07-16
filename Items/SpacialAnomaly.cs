@@ -111,18 +111,25 @@ namespace TakerylProject.Items
 			
 			#region Sword Spin
 			Item item = player.inventory[player.selectedItem];
-			if(modPlayer.spinCoolDown == 0 && !modPlayer.canSpin && !spinning && Main.mouseMiddle && (item.type == 46 || item.type == 121 || item.type == 155 || item.type == 190 || item.type == 273 ||item.type == 368 || item.type == 484 || item.type == 485 || item.type == 486 || item.type == 675 || item.type == 723 || item.type == 989 || item.type == 1166 || item.type == 1185 || item.type == 1192 || item.type == 1199))
+			if(modPlayer.spinCoolDown == 0 && !modPlayer.canSpin && !spinning && Main.mouseMiddle)
 			{
-				spinCharge++;
-				if(spinCharge >= 60)
+				foreach (int i in SwordID.swordTypes)
 				{
-					modPlayer.canSpin = true;
-					spinCharge = 0;
-					spinDuration = 600;
-					modPlayer.spinCoolDown = 1200;
+					if (item.type == i)
+					{
+						spinCharge++;
+						if(spinCharge >= 60)
+						{
+							modPlayer.canSpin = true;
+							spinCharge = 0;
+							spinDuration = 600;
+							modPlayer.spinCoolDown = 1200;
+						}
+						if(spinCharge == 30)
+							Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/conjure"), player.position);
+						break;
+					}
 				}
-				if(spinCharge == 30)
-					Main.PlaySound(mod.GetLegacySoundSlot(SoundType.Custom, "Sounds/Custom/conjure"), player.position);
 			}
 			else
 			{

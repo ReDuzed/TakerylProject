@@ -12,6 +12,8 @@ using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 using Terraria.GameInput;
 
+using TakerylProject.Projectiles;
+
 namespace TakerylProject
 {
 	public class ProjectPlayer : ModPlayer
@@ -21,6 +23,7 @@ namespace TakerylProject
 		public bool drawLeft, drawRight;
 		public bool angel, demon, spacePirate;
 		public bool lightState = false;
+		public bool disabled = true;
 		public int 
 			blinkCoolDown = 0, spinCoolDown = 0, 
 			strikeCoolDown = 0, missileCoolDown = 0;
@@ -38,11 +41,35 @@ namespace TakerylProject
 			angel = tag.GetBool("allegiance");
 			demon = tag.GetBool("_allegiance");
 		}	*/
-		
+		private bool init = true;
 		public override void PreUpdate()
 		{
+			#region debug
+			if (!init && player.active)
+			{
+				player.inventory[6].SetDefaults(mod.ItemType<Items.AngelicGrace>());
+				player.inventory[7].SetDefaults(mod.ItemType<Items.DemonicDeal>());
+				player.inventory[8].SetDefaults(mod.ItemType<Items.BlinkDagger>());
+				player.inventory[9].SetDefaults(mod.ItemType<Items.SpacialAnomaly>());
+				init = true;
+			}
+			#endregion
+			if (KeyPress(Keys.F))
+			{
+				for (int i = 0; i < SwordID.swordTypes.Length; i++)
+				{	
+					if (player.HeldItem.type == SwordID.swordTypes[i])
+					{	
+						float speed = 8f;
+						Projectile.NewProjectile(player.Center, new Vector2(speed * (float)Math.Cos(player.AngleTo(Main.MouseWorld)), speed * (float)Math.Sin(player.AngleTo(Main.MouseWorld))), mod.ProjectileType<Projectiles.ThrownSword>(), 30, 5f, player.whoAmI, ThrownSword.AI_Embed4All, player.HeldItem.type);
+						player.HeldItem.type = ItemID.None;
+						break;
+					}
+				}
+			}
 			if(angel || demon)
 				player.noFallDmg = true;
+			#region actions
 			if(missileCoolDown > 0)
 				missileCoolDown--;
 			if(spinCoolDown > 0)
@@ -51,6 +78,7 @@ namespace TakerylProject
 				blinkCoolDown--;
 			if(strikeCoolDown > 0)
 				strikeCoolDown--;
+			#endregion
 		}
 		
 		int animate = 0, frameHeight = 52;
@@ -79,44 +107,18 @@ namespace TakerylProject
 			Vector2 bodyPosition = new Vector2((float)((int)(player.position.X - Main.screenPosition.X - (float)(player.bodyFrame.Width / 2) + (float)(player.width / 2))), (float)((int)(player.position.Y - Main.screenPosition.Y + (float)player.height - (float)player.bodyFrame.Height + 4f)));
 			Vector2 wingsPosition = new Vector2((float)((int)(Position.X - Main.screenPosition.X + (float)(player.width / 2) - (float)(9 * player.direction)) + 0 * player.direction), (float)((int)(Position.Y - Main.screenPosition.Y + (float)(player.height / 2) + 2f * player.gravDir + (float)24 * player.gravDir)));
 
-      float MoveX = origin.X + (float)(radius*Math.Cos(degrees3));
+      		float MoveX = origin.X + (float)(radius*Math.Cos(degrees3));
 			float MoveY = origin.Y + (float)(radius*Math.Sin(degrees3));
 			
 			Item item = player.inventory[player.selectedItem];
-			#region sword textures
-			if(item.type == 46) // light's bane
-				swordTexture = Main.itemTexture[46];
-			if(item.type == 121) // fiery greatsword
-				swordTexture = Main.itemTexture[121];
-			if(item.type == 155) // muramasa
-				swordTexture = Main.itemTexture[155];
-			if(item.type == 190) // blade of grass
-				swordTexture = Main.itemTexture[190];
-			if(item.type == 273) // night's edge
-				swordTexture = Main.itemTexture[273];
-			if(item.type == 368) // excalibur
-				swordTexture = Main.itemTexture[368];
-			if(item.type == 484) // adamantite sword
-				swordTexture = Main.itemTexture[484];
-			if(item.type == 485) // cobalt sword
-				swordTexture = Main.itemTexture[485];
-			if(item.type == 486) // mythril sword
-				swordTexture = Main.itemTexture[486];
-			if(item.type == 675) // true night's edge
-				swordTexture = Main.itemTexture[675];
-			if(item.type == 723) // beam sword
-				swordTexture = Main.itemTexture[723];
-			if(item.type == 989) // enchanted sword
-				swordTexture = Main.itemTexture[989];
-			if(item.type == 1166) // bone sword
-				swordTexture = Main.itemTexture[1166];
-			if(item.type == 1185) // palladium sword
-				swordTexture = Main.itemTexture[1185];
-			if(item.type == 1192) // orichalcum sword
-				swordTexture = Main.itemTexture[1192];
-			if(item.type == 1199) // titanium sword
-				swordTexture = Main.itemTexture[1199];
-			#endregion
+			for (int i = 0; i < SwordID.swordTypes.Length; i++) 
+			{
+				if (item.type == SwordID.swordTypes[i])
+				{
+					swordTexture = Main.itemTexture[item.type];
+					break;
+				}
+			}
 			if(canSpin)
 			{
 				Main.spriteBatch.Draw(swordTexture, 
@@ -153,6 +155,7 @@ namespace TakerylProject
 				Main.spriteBatch.Draw(GemTexture, 
 					bodyPosition + player.bodyPosition + new Vector2(player.width + 2, -16), 
 					null, color, 0f, origin, 1f, effects, 0f);
+				player.wings = WingID.Angel;
 			}
 			else if(demon)
 			{
@@ -161,7 +164,37 @@ namespace TakerylProject
 				Main.spriteBatch.Draw(GemTexture, 
 					bodyPosition + player.bodyPosition + new Vector2(player.width + 4, -16), 
 					null, color, 0f, origin, 1f, effects, 0f);
+				player.wings = WingID.Demon;
 			}
+			#region debug
+			if (!disabled)
+			{
+				try
+				{
+					if (KeyPress(Keys.Up) && WingID.Selected > 0)
+						WingID.Selected--;
+					if (KeyPress(Keys.Down))
+						WingID.Selected++;
+					if (KeyPress(Keys.F1) && !disabled)
+					{
+						int[] wings = new int[] { ItemID.AngelWings, ItemID.DemonWings };
+						for (int i = 0; i < 2; i++)
+							Item.NewItem(player.Center, Vector2.Zero, wings[i]);
+					}
+					if (KeyPress(Keys.F2))
+						Main.NewText(WingID.Selected);
+					player.wings = WingID.Selected;
+				}
+				catch 
+				{
+					return;
+				}
+			}
+			#endregion
+		}
+		public static bool KeyPress(Keys key)
+		{
+			return Main.oldKeyState.IsKeyUp(key) && Main.keyState.IsKeyDown(key);
 		}
 	}
 }
